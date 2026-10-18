@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.access.prepost.PreAuthorize;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,11 +49,12 @@ public class AIDeveloperMatchingController {
 
     @GetMapping("/{projectId}/developer-matches")
     @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getDeveloperMatches(
             @PathVariable Long projectId,
             Authentication authentication) {
 
-        // Step 1: Get authenticated user
+        // STEP 1: Get authenticated user
         User user = userRepository
                 .findByEmail(authentication.getName())
                 .orElse(null);
@@ -62,7 +65,7 @@ public class AIDeveloperMatchingController {
                     .body(Map.of("error", "User not found"));
         }
 
-        // Step 2: Find project
+        // STEP 2: Find project
         Project project = projectRepository
                 .findById(projectId)
                 .orElse(null);
@@ -73,19 +76,20 @@ public class AIDeveloperMatchingController {
                     .body(Map.of("error", "Project not found"));
         }
 
-        // Step 3: Check project ownership
-        boolean isOwner = project.getOwner()
-                .getId()
-                .equals(user.getId());
+        // STEP 3: Check project ownership
+        boolean isOwner = project.getOwner() != null
+                && project.getOwner()
+                        .getId()
+                        .equals(user.getId());
 
-        // Step 4: Check contributor membership
+        // STEP 4: Check contributor membership
         boolean isContributor =
                 memberRepository.existsByProjectIdAndUserId(
                         projectId,
                         user.getId()
                 );
 
-        // Step 5: Deny access to nonmembers
+        // STEP 5: Verify access
         if (!isOwner && !isContributor) {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
@@ -95,11 +99,11 @@ public class AIDeveloperMatchingController {
                     ));
         }
 
-        // Step 6: Generate AI recommendations
+        // STEP 6: Generate developer matches
         List<DeveloperMatchResponse> matches =
                 matchingService.findMatchingDevelopers(projectId);
 
-        // Step 7: Return results
+        // STEP 7: Return results
         return ResponseEntity.ok(matches);
     }
 }

@@ -3,10 +3,12 @@ package com.techtribe.techtribe_backend.service;
 import com.techtribe.techtribe_backend.dto.DeveloperMatchResponse;
 import com.techtribe.techtribe_backend.model.DeveloperProfile;
 import com.techtribe.techtribe_backend.model.Project;
+
 import com.techtribe.techtribe_backend.repository.DeveloperProfileRepository;
 import com.techtribe.techtribe_backend.repository.ProjectRepository;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,15 +35,18 @@ public class DeveloperMatchingService {
         this.geminiService = geminiService;
     }
 
+    @Transactional(readOnly = true)
     public List<DeveloperMatchResponse> findMatchingDevelopers(Long projectId) {
 
-        // Step 1: Find the project
+        // STEP 1: Find the project
+
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() ->
                         new IllegalArgumentException("Project not found")
                 );
 
-        // Step 2: Get the required technologies
+        // STEP 2: Get the required technologies
+
         Set<String> requiredSkills = parseSkills(
                 project.getTechnologies()
         );
@@ -52,13 +57,15 @@ public class DeveloperMatchingService {
             );
         }
 
-        // Step 3: Retrieve developer profiles
+        // STEP 3: Retrieve developer profiles
+
         List<DeveloperProfile> developers =
                 developerProfileRepository.findAll();
 
         List<DeveloperMatchResponse> matches = new ArrayList<>();
 
-        // Step 4: Compare each developer's skills
+        // STEP 4: Compare each developer's skills
+
         for (DeveloperProfile developer : developers) {
 
             if (developer.getUser() == null) {
@@ -78,11 +85,13 @@ public class DeveloperMatchingService {
             );
 
             // Skip developers without matching skills
+
             if (matchScore == 0) {
                 continue;
             }
 
-            // Step 5: Generate an explanation using Gemini AI
+            // STEP 5: Generate an explanation using Gemini AI
+
             String prompt = """
                     You are an AI developer recruitment assistant
                     for the Tech Tribe collaboration platform.
@@ -125,6 +134,8 @@ public class DeveloperMatchingService {
 
             String reason = geminiService.generateContent(prompt);
 
+            // STEP 6: Create developer match response
+
             DeveloperMatchResponse response =
                     new DeveloperMatchResponse(
                             developer.getUser().getId(),
@@ -137,7 +148,8 @@ public class DeveloperMatchingService {
             matches.add(response);
         }
 
-        // Step 6: Sort developers by highest match score
+        // STEP 7: Sort developers by highest match score
+
         matches.sort(
                 Comparator.comparingInt(
                         DeveloperMatchResponse::getMatchScore
@@ -146,6 +158,8 @@ public class DeveloperMatchingService {
 
         return matches;
     }
+
+    // STEP 8: Convert comma-separated skills into a normalized set
 
     private Set<String> parseSkills(String skills) {
 

@@ -2,7 +2,6 @@ package com.techtribe.techtribe_backend.controller;
 
 import com.techtribe.techtribe_backend.dto.AICodeReviewResponse;
 import com.techtribe.techtribe_backend.model.CodeSnippet;
-import com.techtribe.techtribe_backend.model.Project;
 import com.techtribe.techtribe_backend.model.User;
 
 import com.techtribe.techtribe_backend.repository.CodeSnippetRepository;
@@ -16,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+
+import org.springframework.transaction.annotation.Transactional;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,6 +48,7 @@ public class AICodeReviewController {
 
     @GetMapping("/{snippetId}/review")
     @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> reviewCode(
             @PathVariable Long snippetId,
             Authentication authentication) {
@@ -60,7 +62,10 @@ public class AICodeReviewController {
         if (user == null) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "User not found"));
+                    .body(Map.of(
+                            "error",
+                            "User not found"
+                    ));
         }
 
         // STEP 2: Retrieve code snippet
@@ -72,18 +77,30 @@ public class AICodeReviewController {
         if (snippet == null) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Code snippet not found"));
+                    .body(Map.of(
+                            "error",
+                            "Code snippet not found"
+                    ));
         }
 
-        // STEP 3: Get the associated project
+        // STEP 3: Retrieve associated project ID
 
-        Project project = snippet.getProject();
+        if (snippet.getProject() == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "error",
+                            "Associated project not found"
+                    ));
+        }
 
-        Long projectId = project.getId();
+        Long projectId = snippet.getProject().getId();
 
         // STEP 4: Check project ownership
+        // Transaction keeps Hibernate session open here.
 
-        boolean isOwner = project.getOwner()
+        boolean isOwner = snippet.getProject()
+                .getOwner()
                 .getId()
                 .equals(user.getId());
 

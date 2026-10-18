@@ -3,6 +3,9 @@ package com.techtribe.techtribe_backend.service;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +21,9 @@ import java.util.Map;
 
 @Service
 public class GeminiService {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(GeminiService.class);
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -43,6 +49,12 @@ public class GeminiService {
         if (prompt == null || prompt.isBlank()) {
             throw new IllegalArgumentException(
                     "AI prompt cannot be empty."
+            );
+        }
+
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException(
+                    "Gemini API key is missing."
             );
         }
 
@@ -79,15 +91,57 @@ public class GeminiService {
                     )
                     .build();
 
+            logger.info(
+                    "Sending request to Gemini model: {}",
+                    model
+            );
+
             HttpResponse<String> response = httpClient.send(
                     request,
                     HttpResponse.BodyHandlers.ofString()
             );
 
-            if (response.statusCode() != 200) {
+            int statusCode = response.statusCode();
+
+            logger.info(
+                    "Gemini API returned HTTP status: {}",
+                    statusCode
+            );
+
+            if (statusCode != 200) {
+
+                String errorMessage = "Gemini API request failed.";
+
+                try {
+                    JsonNode errorRoot =
+                            objectMapper.readTree(response.body());
+
+                    String apiMessage = errorRoot
+                            .path("error")
+                            .path("message")
+                            .asText();
+
+                    if (apiMessage != null && !apiMessage.isBlank()) {
+                        errorMessage = apiMessage;
+                    }
+
+                } catch (Exception parseException) {
+                    logger.warn(
+                            "Unable to parse Gemini error response."
+                    );
+                }
+
+                logger.error(
+                        "Gemini API error. HTTP status: {}. Message: {}",
+                        statusCode,
+                        errorMessage
+                );
+
                 throw new IllegalStateException(
-                        "Gemini API request failed. HTTP status: "
-                        + response.statusCode()
+                        "Gemini API request failed. HTTP "
+                        + statusCode
+                        + ": "
+                        + errorMessage
                 );
             }
 
@@ -110,20 +164,36 @@ public class GeminiService {
                 );
             }
 
+            logger.info(
+                    "Gemini generated content successfully."
+            );
+
             return textNode.asText();
 
         } catch (InterruptedException e) {
 
             Thread.currentThread().interrupt();
 
+            logger.error(
+                    "Gemini request interrupted.",
+                    e
+            );
+
             throw new IllegalStateException(
-                    "Gemini request was interrupted.", e
+                    "Gemini request was interrupted.",
+                    e
             );
 
         } catch (IOException e) {
 
+            logger.error(
+                    "Unable to communicate with Gemini API.",
+                    e
+            );
+
             throw new IllegalStateException(
-                    "Unable to communicate with Gemini API.", e
+                    "Unable to communicate with Gemini API.",
+                    e
             );
         }
     }

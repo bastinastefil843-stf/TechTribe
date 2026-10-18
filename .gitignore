@@ -1,33 +1,55 @@
-HELP.md
+# ==========================
+# JAVA / SPRING BOOT
+# ==========================
 target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.log
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Maven
+.mvn/timing.properties
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
+# ==========================
+# ENVIRONMENT VARIABLES
+# ==========================
+.env
+.env.*
+!.env.example
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+# Local Spring Boot configuration
+application-local.properties
+application-local.yml
+application-local.yaml
 
-### VS Code ###
+# ==========================
+# FRONTEND (for later)
+# ==========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# ==========================
+# IDE FILES
+# ==========================
 .vscode/
+.idea/
+*.iml
+*.suo
+*.sw?
+
+# ==========================
+# OPERATING SYSTEM
+# ==========================
+.DS_Store
+Thumbs.db
+
+# ==========================
+# LOG FILES
+# ==========================
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

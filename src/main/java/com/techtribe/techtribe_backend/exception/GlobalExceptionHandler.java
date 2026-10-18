@@ -10,12 +10,23 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+// Logging imports
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // =====================================
+    // LOGGER
+    // =====================================
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // =====================================
     // 1. DTO VALIDATION ERRORS - HTTP 400
@@ -134,6 +145,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleUnexpectedError(
             Exception ex) {
 
+        // Log the actual error in the Spring Boot terminal
+        logger.error("Unexpected backend error", ex);
+
+        // Return a safe error message to the frontend
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(createErrorResponse(

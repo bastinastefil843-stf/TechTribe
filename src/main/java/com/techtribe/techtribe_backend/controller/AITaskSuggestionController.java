@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,11 +49,13 @@ public class AITaskSuggestionController {
 
     @GetMapping("/{projectId}/task-suggestions")
     @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> getTaskSuggestions(
             @PathVariable Long projectId,
             Authentication authentication) {
 
         // STEP 1: Get authenticated user
+
         User user = userRepository
                 .findByEmail(authentication.getName())
                 .orElse(null);
@@ -63,6 +67,7 @@ public class AITaskSuggestionController {
         }
 
         // STEP 2: Find project
+
         Project project = projectRepository
                 .findById(projectId)
                 .orElse(null);
@@ -74,18 +79,22 @@ public class AITaskSuggestionController {
         }
 
         // STEP 3: Check project ownership
-        boolean isOwner = project.getOwner()
-                .getId()
-                .equals(user.getId());
+
+        boolean isOwner = project.getOwner() != null
+                && project.getOwner()
+                        .getId()
+                        .equals(user.getId());
 
         // STEP 4: Check contributor membership
+
         boolean isContributor =
                 memberRepository.existsByProjectIdAndUserId(
                         projectId,
                         user.getId()
                 );
 
-        // STEP 5: Deny access to nonmembers
+        // STEP 5: Verify access
+
         if (!isOwner && !isContributor) {
             return ResponseEntity
                     .status(HttpStatus.FORBIDDEN)
@@ -96,10 +105,12 @@ public class AITaskSuggestionController {
         }
 
         // STEP 6: Generate AI task suggestions
+
         List<AITaskSuggestionResponse> suggestions =
                 taskSuggestionService.generateTaskSuggestions(projectId);
 
         // STEP 7: Return suggestions
+
         return ResponseEntity.ok(suggestions);
     }
 }

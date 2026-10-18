@@ -1,7 +1,9 @@
-
 package com.techtribe.techtribe_backend.dto;
 
 import com.techtribe.techtribe_backend.model.Task;
+
+import org.hibernate.Hibernate;
+
 import java.time.LocalDate;
 
 public class TaskResponse {
@@ -17,19 +19,39 @@ public class TaskResponse {
 
     public TaskResponse(Task task) {
 
+        // STEP 1: Basic task information
+
         this.id = task.getId();
         this.title = task.getTitle();
         this.description = task.getDescription();
         this.status = task.getStatus();
         this.deadline = task.getDeadline();
 
-        this.projectId = task.getProject().getId();
+        // STEP 2: Project information
+
+        if (task.getProject() != null) {
+            this.projectId = task.getProject().getId();
+        }
+
+        // STEP 3: Assigned developer information
 
         if (task.getAssignedTo() != null) {
+
             this.assignedToId = task.getAssignedTo().getId();
-            this.assignedToName = task.getAssignedTo().getName();
+
+            // Avoid accessing an uninitialized Hibernate proxy
+            // when the persistence context is already closed.
+
+            if (Hibernate.isInitialized(task.getAssignedTo())) {
+                this.assignedToName =
+                        task.getAssignedTo().getName();
+            }
         }
     }
+
+    // =====================================
+    // GETTERS
+    // =====================================
 
     public Long getId() {
         return id;

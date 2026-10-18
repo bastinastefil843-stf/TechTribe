@@ -2,6 +2,7 @@ package com.techtribe.techtribe_backend.repository;
 
 import com.techtribe.techtribe_backend.model.Project;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,15 +12,34 @@ import java.util.Optional;
 @Repository
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
-    // Find all projects created by a particular developer
+    // Find projects belonging to a developer
+    @EntityGraph(attributePaths = {"owner"})
     List<Project> findByOwnerId(Long ownerId);
 
-    // Find a project by ID only if it belongs to the specified developer
-    Optional<Project> findByIdAndOwnerId(Long projectId, Long ownerId);
+    // Find a project belonging to a particular developer
+    @EntityGraph(attributePaths = {"owner"})
+    Optional<Project> findByIdAndOwnerId(
+            Long projectId,
+            Long ownerId
+    );
 
-    // Find projects by their status
+    // Find projects by status
+    @EntityGraph(attributePaths = {"owner"})
     List<Project> findByStatus(String status);
 
-    // Find projects created by a developer, newest first
-    List<Project> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);
+    // Find developer projects, newest first
+    @EntityGraph(attributePaths = {"owner"})
+    List<Project> findByOwnerIdOrderByCreatedAtDesc(
+            Long ownerId
+    );
+
+    // Explore all projects with their owners loaded
+    @Override
+    @EntityGraph(attributePaths = {"owner"})
+    List<Project> findAll();
+
+    // Find a project by ID with its owner loaded
+    @Override
+    @EntityGraph(attributePaths = {"owner"})
+    Optional<Project> findById(Long id);
 }

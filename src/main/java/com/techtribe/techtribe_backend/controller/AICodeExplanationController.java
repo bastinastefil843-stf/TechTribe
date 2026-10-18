@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -43,9 +45,12 @@ public class AICodeExplanationController {
 
     @PostMapping("/{snippetId}/explain")
     @PreAuthorize("isAuthenticated()")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> explainCode(
             @PathVariable Long snippetId,
             Authentication authentication) {
+
+        // STEP 1: Identify authenticated user
 
         User user = userRepository
                 .findByEmail(authentication.getName())
@@ -54,8 +59,13 @@ public class AICodeExplanationController {
         if (user == null) {
             return ResponseEntity
                     .status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "User not found"));
+                    .body(Map.of(
+                            "error",
+                            "User not found"
+                    ));
         }
+
+        // STEP 2: Retrieve code snippet
 
         CodeSnippet snippet = codeSnippetRepository
                 .findById(snippetId)
@@ -64,20 +74,43 @@ public class AICodeExplanationController {
         if (snippet == null) {
             return ResponseEntity
                     .status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Code snippet not found"));
+                    .body(Map.of(
+                            "error",
+                            "Code snippet not found"
+                    ));
         }
+
+        // STEP 3: Retrieve associated project
 
         Project project = snippet.getProject();
 
-        boolean isOwner = project.getOwner()
-                .getId()
-                .equals(user.getId());
+        if (project == null) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(Map.of(
+                            "error",
+                            "Associated project not found"
+                    ));
+        }
+
+        Long projectId = project.getId();
+
+        // STEP 4: Check project ownership
+
+        boolean isOwner = project.getOwner() != null
+                && project.getOwner()
+                        .getId()
+                        .equals(user.getId());
+
+        // STEP 5: Check accepted contributor membership
 
         boolean isContributor =
                 memberRepository.existsByProjectIdAndUserId(
-                        project.getId(),
+                        projectId,
                         user.getId()
                 );
+
+        // STEP 6: Verify access
 
         if (!isOwner && !isContributor) {
             return ResponseEntity
@@ -88,8 +121,12 @@ public class AICodeExplanationController {
                     ));
         }
 
+        // STEP 7: Generate AI code explanation
+
         String explanation =
                 explanationService.explainCode(snippetId);
+
+        // STEP 8: Return explanation
 
         return ResponseEntity.ok(
                 Map.of("explanation", explanation)

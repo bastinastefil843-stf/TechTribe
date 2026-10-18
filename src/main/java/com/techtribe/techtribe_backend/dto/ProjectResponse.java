@@ -1,6 +1,7 @@
 package com.techtribe.techtribe_backend.dto;
 
 import com.techtribe.techtribe_backend.model.Project;
+import com.techtribe.techtribe_backend.model.User;
 
 import java.time.LocalDateTime;
 
@@ -16,6 +17,10 @@ public class ProjectResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
+    // ==========================================
+    // CONSTRUCTOR
+    // ==========================================
+
     public ProjectResponse(Project project) {
 
         this.id = project.getId();
@@ -24,12 +29,24 @@ public class ProjectResponse {
         this.technologies = project.getTechnologies();
         this.status = project.getStatus();
 
-        this.ownerId = project.getOwner().getId();
-        this.ownerName = project.getOwner().getName();
+        // Safely retrieve project owner
+        User owner = project.getOwner();
+
+        if (owner != null) {
+            this.ownerId = owner.getId();
+            this.ownerName = owner.getName();
+        } else {
+            this.ownerId = null;
+            this.ownerName = "Unknown";
+        }
 
         this.createdAt = project.getCreatedAt();
         this.updatedAt = project.getUpdatedAt();
     }
+
+    // ==========================================
+    // GETTERS
+    // ==========================================
 
     public Long getId() {
         return id;
